@@ -21,6 +21,7 @@
 
 */
 
+#define _XOPEN_SOURCE 600
 #define NCURSES_WIDECHAR 1
 
 #include <errno.h>
@@ -28,12 +29,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <locale.h>
+#include <wchar.h>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -147,7 +150,7 @@ void c_die(char *msg, ...) {
 }
 
 void usage(void) {
-    printf(" Usage: cmatrix -[abBcfhlsmVxk] [-u delay] [-C color] [-t tty] [-M message]\n");
+    printf(" Usage: cmatrix -[abBcfhlsmVxk] [-u delay] [-C color] [-t tty] [-M message] [-U chars] [-F freq]\n");
     printf(" -a: Asynchronous scroll\n");
     printf(" -b: Bold characters on\n");
     printf(" -B: All bold characters (overrides -b)\n");
@@ -168,6 +171,9 @@ void usage(void) {
     printf(" -m: lambda mode\n");
     printf(" -k: Characters change while scrolling. (Works without -o opt.)\n");
     printf(" -t [tty]: Set tty to use\n");
+    printf(" -U [chars]: Use custom characters (comma-separated, e.g., \"🎄,⭐,🎁,🔔\")\n");
+    printf(" -F [freq]: Custom character frequency 0-100 (default 50, only works with -U)\n");
+
 }
 
 void version(void) {
@@ -310,6 +316,89 @@ void resize_screen(void) {
     refresh();
 }
 
+char *charset = NULL;
+int charsetlen;
+wchar_t *custom_chars = NULL;
+int custom_chars_count = 0;
+int custom_chars_freq = 50;  /* Default frequency 50% */
+
+/* Parse comma-separated UTF-8 emoji list into wide character array */
+void parse_custom_chars(const char *input) {
+    if (!input || strlen(input) == 0) return;
+    
+    /* Make a copy to work with */
+    char *input_copy = strdup(input);
+    if (!input_copy) return;
+    
+    /* First pass: count how many emojis we have */
+    int count = 0;
+    char *temp = strdup(input);
+    char *token = strtok(temp, ",");
+    while (token) {
+        count++;
+        token = strtok(NULL, ",");
+    }
+    free(temp);
+    
+    if (count == 0) {
+        free(input_copy);
+        return;
+    }
+    
+    /* Allocate array for wide characters */
+    custom_chars = (wchar_t *)malloc(count * sizeof(wchar_t));
+    if (!custom_chars) {
+        free(input_copy);
+        return;
+    }
+    
+    /* Second pass: convert each emoji to wide char */
+    custom_chars_count = 0;
+    token = strtok(input_copy, ",");
+    while (token) {
+        /* Trim whitespace */
+        while (*token == ' ' || *token == '\t') token++;
+        char *end = token + strlen(token) - 1;
+        while (end > token && (*end == ' ' || *end == '\t')) end--;
+        *(end + 1) = '\0';
+        
+        /* Convert UTF-8 to wide character */
+        wchar_t wc;
+        mbstate_t state;
+        memset(&state, 0, sizeof(state));
+        size_t len = mbrtowc(&wc, token, MB_CUR_MAX, &state);
+        
+        if (len > 0 && len != (size_t)-1 && len != (size_t)-2) {
+            custom_chars[custom_chars_count++] = wc;
+        }
+        
+        token = strtok(NULL, ",");
+    }
+    
+    free(input_copy);
+}
+
+/* Check if a character is from our custom character set */
+int is_custom_char(int val) {
+    if (custom_chars_count == 0) return 0;
+    for (int i = 0; i < custom_chars_count; i++) {
+        if (custom_chars[i] == val) return 1;
+    }
+    return 0;
+}
+
+int randomchar(int randnum, int randmin, int customcharset) {
+    if (customcharset && custom_chars_count > 0) {
+        /* Use custom characters based on frequency */
+        if ((rand() % 100) < custom_chars_freq) {
+            return custom_chars[rand() % custom_chars_count];
+        } else {
+            return (int) rand() % randnum + randmin;
+        }
+    }
+    else return (int) rand() % randnum + randmin;
+}
+
 int main(int argc, char *argv[]) {
     int i, y, z, optchr, keypress;
     int j = 0;
@@ -331,6 +420,7 @@ int main(int argc, char *argv[]) {
     int pause = 0;
     int classic = 0;
     int changes = 0;
+    int customcharset = 0;
     char *msg = "";
     char *tty = NULL;
 
@@ -339,7 +429,7 @@ int main(int argc, char *argv[]) {
 
     /* Many thanks to morph- (morph@jmss.com) for this getopt patch */
     opterr = 0;
-    while ((optchr = getopt(argc, argv, "abBcfhlLnrosmxkVM:u:C:t:")) != EOF) {
+    while ((optchr = getopt(argc, argv, "abBcfhlLnrosmxkVM:u:C:t:U:F:")) != EOF) {
         switch (optchr) {
         case 's':
             screensaver = 1;
@@ -428,6 +518,18 @@ int main(int argc, char *argv[]) {
         case 't':
             tty = optarg;
             break;
+	case 'U':
+	    charset = optarg;
+	    charsetlen = strlen(charset);
+	    customcharset = 1;
+	    parse_custom_chars(optarg);
+            break;
+	case 'F':
+	    custom_chars_freq = atoi(optarg);
+	    if (custom_chars_freq < 0) custom_chars_freq = 0;
+	    if (custom_chars_freq > 100) custom_chars_freq = 100;
+	    break;
+
         }
     }
 
@@ -682,14 +784,14 @@ if (console) {
                             if (((int) rand() % 3) == 1) {
                                 matrix[0][j].val = 0;
                             } else {
-                                matrix[0][j].val = (int) rand() % randnum + randmin;
+                                matrix[0][j].val = randomchar(randnum, randmin, customcharset);
                             }
                             spaces[j] = (int) rand() % LINES + 1;
                         }
                     } else if (random > highnum && matrix[1][j].val != 1) {
                         matrix[0][j].val = ' ';
                     } else {
-                        matrix[0][j].val = (int) rand() % randnum + randmin;
+                        matrix[0][j].val = randomchar(randnum, randmin, customcharset);
                     }
 
                 } else { /* New style scrolling (default) */
@@ -699,7 +801,7 @@ if (console) {
                     } else if (matrix[0][j].val == -1
                         && matrix[1][j].val == ' ') {
                         length[j] = (int) rand() % (LINES - 3) + 3;
-                        matrix[0][j].val = (int) rand() % randnum + randmin;
+                        matrix[0][j].val = randomchar(randnum, randmin, customcharset);
 
                         spaces[j] = (int) rand() % LINES + 1;
                     }
@@ -726,7 +828,7 @@ if (console) {
                             matrix[i][j].is_head = false;
                             if (changes) {
                                 if (rand() % 8 == 0)
-                                    matrix[i][j].val = (int) rand() % randnum + randmin;
+                                    matrix[i][j].val = randomchar(randnum, randmin, customcharset);
                             }
                             i++;
                             y++;
@@ -737,7 +839,7 @@ if (console) {
                             continue;
                         }
 
-                        matrix[i][j].val = (int) rand() % randnum + randmin;
+                        matrix[i][j].val = randomchar(randnum, randmin, customcharset);
                         matrix[i][j].is_head = true;
 
                         /* If we're at the top of the column and it's reached its
@@ -782,7 +884,17 @@ if (console) {
                     } else if (matrix[i][j].val == -1) {
                         addch(' ');
                     } else {
-                        addch(matrix[i][j].val);
+                        /* Handle wide characters in head rendering too */
+                        wchar_t head_char[2];
+                        head_char[0] = matrix[i][j].val;
+                        head_char[1] = 0;
+                        if (head_char[0] > 127) {
+                            /* Unicode character (including emojis) */
+                            addwstr(head_char);
+                        } else {
+                            /* Regular ASCII */
+                            addch(matrix[i][j].val);
+                        }
                     }
 
                     attroff(COLOR_PAIR(COLOR_WHITE));
@@ -847,6 +959,8 @@ if (console) {
                             wchar_t char_array[2];
                             char_array[0] = matrix[i][j].val;
                             char_array[1] = 0;
+                            /* Wide characters (emojis) naturally take 2 columns,
+                             * which fits the matrix spacing (j += 2) */
                             addwstr(char_array);
                         }
                         if (bold == 2 ||
