@@ -1,40 +1,59 @@
-<h1 align="center">CMatrix</h1>
+<h1 align="center">CMatrix (Custom Characters Fork)</h1>
 
-<h3 align="center"> Matrix like effect in your terminal </h3>
+<h3 align="center"> Matrix like effect in your terminal with custom emoji support! </h3>
 
 </p>
 <p align="center">
-  <a href="https://travis-ci.org/abishekvashok/cmatrix">
-    <img src="https://travis-ci.org/abishekvashok/cmatrix.svg?branch=master">
-  </a>
   <a href="./COPYING">
     <img src="https://img.shields.io/github/license/abishekvashok/cmatrix?color=blue">
   </a>
   <img src="https://img.shields.io/badge/contributions-welcome-orange">
-  <a href="https://github.com/abishekvashok/cmatrix/stargazers">
-    <img src="https://img.shields.io/github/stars/abishekvashok/cmatrix">
-  </a>
-  <a href="https://github.com/abishekvashok/cmatrix/network">
-    <img src="https://img.shields.io/github/forks/abishekvashok/cmatrix">
-  </a>
 </p>
 
+> **Note:** This is a fork of [abishekvashok/cmatrix](https://github.com/abishekvashok/cmatrix) with custom character support based on [HlibShutov's PR](https://github.com/HlibShutov/cmatrix/tree/master). All credit for the original cmatrix goes to **Chris Allegretta** and **Abishek V Ashok**.
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
+
+## :sparkles: What's New in This Fork
+
+This fork adds **custom character support** via the `-U` flag, allowing you to use emojis and unicode characters with configurable frequency!
+
+### New Options
+- **`-U <chars>`**: Use custom characters (comma-separated list)
+- **`-F <0-100>`**: Set frequency of custom characters (default: 50)
+
+### Examples
+```sh
+# Christmas theme with 80% emoji frequency
+cmatrix -U "🎄,⭐,🎁,🔔" -F 80
+
+# Hearts theme with 100% emojis
+cmatrix -U "❤️,💕,💖,💗" -F 100
+
+# Mix emojis with regular Matrix characters
+cmatrix -U "☀️,🌙,⭐,✨" -F 30
+```
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
+
+## :camera: Demo
+
+<p align="center">
+<img src="./matrix.gif" alt="cmatrix with custom emojis demo">
+</p>
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## Contents
 - [Overview](#overview)
 - [Build Dependencies](#build-dependencies)
-- [Building and Installation](#building-and-installing-cmatrix)
-    - [Using configure (recommended)](#using-configure-(recommended-for-most-linux%2Fmingw-users))
+- [Installation](#installation)
+    - [Using Nix Flakes (Recommended)](#using-nix-flakes-recommended)
+    - [Using configure](#using-configure)
     - [Using CMake](#using-cmake)
+- [Demo](#demo)
 - [Usage](#usage)
-- [Captures](#captures)
-    - [Screenshots](#screenshots)
-    - [Screencasts](#screencasts)
-- [Maintainer](#maintainers)
-    - [Contributors](#our-contributors)
-- [Contribution Guide](#contribution-guide)
+- [Credits](#credits)
 - [License](#license)
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
@@ -46,7 +65,7 @@ flying in and out in a terminal like as seen in "The Matrix" movie. It can
 scroll lines all at the same rate or asynchronously and at a user-defined
 speed.
 
-CMAtrix is inspired from 'The Matrix' movie. If you haven’t seen this movie and you are a fan of computers or sci-fi in general, go see this movie!!!
+This fork extends the original with the ability to use custom characters (including emojis) to create themed matrix effects!
 
 > :grey_exclamation:`Disclaimer` : We are in no way affiliated in any way with the movie "The Matrix", "Warner Bros" nor
 any of its affiliates in any way, just fans.
@@ -54,132 +73,144 @@ any of its affiliates in any way, just fans.
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## :open_file_folder: Build Dependencies
-You'll probably need a decent ncurses library to get this to work. On Windows, using mingw-w64-ncurses is recommended (PDCurses will also work, but it does not support colors or bold text).
-<br>
-##### :small_blue_diamond: For Linux<br>
-Run this command to check the version of ncurses.
+
+You'll need ncurses (or ncursesw for wide character support) to compile this.
+
+##### :small_blue_diamond: For Linux
+```sh
+# Debian/Ubuntu
+sudo apt install libncursesw5-dev
+
+# Fedora/RHEL
+sudo dnf install ncurses-devel
+
+# Arch Linux
+sudo pacman -S ncurses
 ```
+
+Check your ncurses version:
+```sh
 ldconfig -p | grep ncurses
 ```
-If you get no output then you need to install ncurses. Click below to install ncurses in Linux.
-- [ncurses](https://www.cyberciti.biz/faq/linux-install-ncurses-library-headers-on-debian-ubuntu-centos-fedora/)
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
-## :floppy_disk: Building and installing cmatrix
-To install cmatrix, Clone this repo in your local system and use either of the following methods from within the cmatrix directory.
+## :package: Installation
 
-#### :small_blue_diamond: Using `configure` (recommended for most linux/mingw users)
+### Using Nix Flakes (Recommended)
+
+If you use NixOS or have Nix with flakes enabled:
+
+```sh
+# Run directly without installing
+nix run github:Castrozan/cmatrix
+
+# Install to your profile
+nix profile install github:Castrozan/cmatrix
+
+# Add to your NixOS configuration or home-manager
+{
+  inputs.cmatrix.url = "github:Castrozan/cmatrix";
+  
+  # Then in your packages:
+  environment.systemPackages = [
+    inputs.cmatrix.packages.${system}.default
+  ];
+}
+```
+
+### Using `configure`
 ```sh
 autoreconf -i  # skip if using released tarball
 ./configure
 make
-make install
+sudo make install
 ```
 
-#### :small_blue_diamond: Using CMake
-Here we also show an out-of-source build in the sub directory "build".
-(Doesn't work on Windows, for now).
+### Using CMake
 ```sh
 mkdir -p build
 cd build
-# to install to "/usr/local"
 cmake ..
-# OR 
-# to install to "/usr"
-#cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 make
-make install
+sudo make install
 ```
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## :bookmark_tabs: Usage
 
-After you have installed **cmatrix** just type the command `cmatrix` to run it :)
+### Basic Usage
 ```sh
 cmatrix
 ```
-Run with different arguments to get different effects.
+
+### With Custom Characters
 ```sh
-cmatrix [-abBflohnsmVx] [-u update] [-C color]
+# Emoji themed matrix
+cmatrix -U "🎄,⭐,🎁,🔔" -F 80
+
+# Mix with classic matrix look
+cmatrix -lba -U "👾,🎮,💾,🖥️" -F 50
 ```
-Example:
+
+### All Options
 ```sh
-cmatrix -ba -u 2 -C red
+cmatrix [-abBflohnsmVx] [-u update] [-C color] [-U chars] [-F frequency]
 ```
 
-For more options and **help** run `cmatrix -h` <br>OR<br> Read Manual Page by running command `man cmatrix`
+- `-a`: Asynchronous scroll
+- `-b`: Bold characters on
+- `-B`: All bold characters
+- `-f`: Force the linux $TERM type to be on
+- `-l`: Linux mode (uses matrix console font)
+- `-o`: Use old-style scrolling
+- `-h`: Print usage and exit
+- `-n`: No bold characters
+- `-s`: "Screensaver" mode
+- `-m`: Matrix mode (fewer updates)
+- `-V`: Print version information and exit
+- `-u [0-9]`: Screen update delay
+- `-C [color]`: Use this color for matrix (default green)
+- `-U [chars]`: Custom characters (comma-separated)
+- `-F [0-100]`: Custom character frequency (default 50)
 
-_To get the program to look most like the movie, use `cmatrix -lba`_
-_To get the program to look most like the Win/Mac screensaver, use `cmatrix -ol`_
+For more options: `cmatrix -h` or `man cmatrix`
 
-> :round_pushpin: _Note: cmatrix is probably not particularly portable or efficient, but it won't hog
-**too** much CPU time._
-
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
-
-## :camera: Captures
-
-#### :small_blue_diamond: Screenshots
-
-<!-- ![Special Font & bold](data/img/capture_bold_font.png?raw=true "cmatrix -bx") -->
-<p align="center">
-<img src="./data/img/capture_bold_font.png" alt="cmatrix screenshot">
-</p>
-
-#### :small_blue_diamond: Screencasts
-
-<!-- ![Movie-Like Cast](data/img/capture_orig.gif?raw=true "cmatrix -xba") -->
-<p align="center">
-<img src="./data/img/capture_orig.gif" alt="cmatrix screencast">
-</p>
+_To get the program to look most like the movie: `cmatrix -lba`_  
+_To get the program to look most like the Win/Mac screensaver: `cmatrix -ol`_
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
-## :zap: Maintainers
-- ➤ **Abishek V Ashok** [Core] - <abishekvashok@gmail.com><br> 
-<p align="center">
-  <a href="https://twitter.com/abishekvashok">
-    <img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white">
-  </a>
-  <a href="https://github.com/abishekvashok">
-    <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white">
-  </a>
-</p>
+## :busts_in_silhouette: Credits
 
+### Original Authors
+- **Chris Allegretta** - Original author of cmatrix
+- **Abishek V Ashok** - Current maintainer of [abishekvashok/cmatrix](https://github.com/abishekvashok/cmatrix)
 
-## :busts_in_silhouette: Our Contributors
-#### :small_orange_diamond: Thanks to
-- ➤ **Chris Allegretta** <chrisa@asty.org> for writing cmatrix up in a fortnight and giving us
-  the responsibility to further improve it.
-- ➤ **Krisjon Hanson** and **Bjoern Ganslandt** for helping with bold support and
-  Bjoern again for the cursor removal code, helping with the `-u` and `-l`
-  modes/flags, and Makefile improvements.
-- ➤ **Adam Gurno** for multi-color support.
-- ➤ **Garrick West** for debian consolefont dir support.
-- ➤ **Nemo** for design thoughts and continuous help and support.
-- ➤ **John Donahue** for helping with transparent term support
-- ➤ **Ben Esacove** for Redhat 6 compatibility w/matrix.psf.gz
-- ➤ **jwz** for the xmatrix module to xscreensaver at http://www.jwz.org/xscreensaver.
-- Chris Allegretta's girlfriend **Amy** for not killing him when he stayed up till 3 AM
-  writing code.
-- ➤ **Sumit Kumar Soni** for beautifying the README.
-- The makers of the Matrix for one kickass movie!
-- ➤ Everyone who has sent (and who will send) us and Chris mails regarding
-  bugs, comments, patches or just a simple hello.
-- ➤ Everyone who has contributed to the project by opening issues and PRs on the github repository.
+### This Fork
+- **Lucas Zanoni** - Maintainer of this fork at [Castrozan/cmatrix](https://github.com/Castrozan/cmatrix)
+- Based on custom character implementation from [HlibShutov/cmatrix](https://github.com/HlibShutov/cmatrix/tree/master)
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
+### Contributors to Original Project
+- **Krisjon Hanson** and **Bjoern Ganslandt** - Bold support, cursor removal, `-u` and `-l` modes
+- **Adam Gurno** - Multi-color support
+- **Garrick West** - Debian consolefont dir support
+- **Nemo** - Design thoughts and continuous support
+- **John Donahue** - Transparent term support
+- **Ben Esacove** - Redhat 6 compatibility
+- **jwz** - xmatrix module for xscreensaver
+- **Sumit Kumar Soni** - README beautification
+- Everyone who has contributed to the original project with issues, PRs, and feedback
 
-## :book: Contribution Guide
-If you have any suggestions/flames/patches to send, please feel free to:
-- Open issues and if possible label them, so that it is easy to categorise features, bugs etc.
-- If you solved some problems or made some valuable changes, Please open a Pull Request on Github.
-- See [contributing.md](./CONTRIBUTING.md) for more details.
+### Special Thanks
+- The makers of The Matrix for one kickass movie!
+- Chris Allegretta's girlfriend **Amy** for not killing him when he stayed up till 3 AM writing code
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## :page_facing_up: License
 This software is provided under the GNU GPL v3. [View License](./COPYING)
 
+Original cmatrix: Copyright (C) 1999-2017 Chris Allegretta, 2017-Present Abishek V Ashok  
+This fork: Maintained by Lucas Zanoni
