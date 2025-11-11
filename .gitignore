@@ -30,3 +30,8 @@ cmatrix.exe
 *.core
 CMakeCache.txt
 CMakeFiles/
+
+# Nix
+result
+result-*
+.direnv/
